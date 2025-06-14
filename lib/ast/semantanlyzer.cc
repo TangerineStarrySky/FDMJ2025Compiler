@@ -13,18 +13,15 @@ using namespace std;
 using namespace fdmj;
 
 // TODO
-
 AST_Semant_Map* semant_analyze(Program* node) {
-    // std::cout << "TODO" << std::endl;
-    // return nullptr;
-    std::cerr << "Start Semantic Analysis" << std::endl;
+    // std::cerr << "Start Semantic Analysis" << std::endl;
     if (node == nullptr) {
         return nullptr;
     }
     Name_Maps* name_maps = makeNameMaps(node);
     AST_Semant_Visitor semant_visitor(name_maps);
     semant_visitor.visit(node);
-    std::cerr << "Semantic Analysis Done" << std::endl;
+    // std::cerr << "Semantic Analysis Done" << std::endl;
     return semant_visitor.getSemantMap();
 }
 
@@ -36,7 +33,7 @@ void AST_Semant_Visitor::visit(Program* node) {
         return;
     }
     if (node->main) {
-        current_class = "MainClass";
+        current_class = "_^main^_";
         current_method = "main";
         node->main->accept(*this);
         current_class.clear();
@@ -271,7 +268,7 @@ void AST_Semant_Visitor::visit(Assign* node) {
     if (ltype == TypeKind::CLASS){
         string lclass = std::get<string>(left_semant->get_type_par());
         string rclass = std::get<string>(right_semant->get_type_par());
-        set<string> ancestors = name_maps->get_ancestors(rclass);
+        set<string> ancestors = name_maps->get_ancestors_ast(rclass);
         ancestors.insert(rclass);
         if (ancestors.find(lclass) == ancestors.end()) {
             cerr << "Error: inheritance relationship violated in assignment" << "\tPos: " << node->getPos()->print() << endl;
@@ -341,12 +338,12 @@ void AST_Semant_Visitor::visit(CallStm* node) {
 
     // 获取调用对象的类名
     string obj_class_name = std::get<string>(obj_semant->get_type_par());
-    set<string> ancestors = name_maps->get_ancestors(obj_class_name);
+    set<string> ancestors = name_maps->get_ancestors_ast(obj_class_name);
     ancestors.insert(obj_class_name);
     for(auto ancestor_class: ancestors){
         // 假设 name_maps 中有方法的签名信息
         if(name_maps->is_method(ancestor_class, node->name->id)) {
-            vector<Formal*>* formalList = name_maps->get_method_formal_list(ancestor_class, node->name->id);
+            vector<Formal*>* formalList = name_maps->get_method_formal_list_ast(ancestor_class, node->name->id);
             if (node->par && formalList->size() != node->par->size()) {
                 cerr << "Error: Parameter count mismatch in method call." << "\tPos: " << node->getPos()->print() << endl;
                 cerr << "exit program ..." << endl;
@@ -414,7 +411,7 @@ void AST_Semant_Visitor::visit(Return* node) {
         }
         // 做返回值类型检验
         TypeKind exp_type = exp_semant->get_type();
-        Formal* return_formal = name_maps->get_method_formal(current_class, current_method, "return_value");
+        Formal* return_formal = name_maps->get_method_formal(current_class, current_method, "_^return^_"+current_method);
         if(exp_type != return_formal->type->typeKind){
             cerr << "Error: Return type mismatch." << "\tPos: " << node->getPos()->print() << endl;
             cerr << "exit program ..." << endl;
@@ -423,7 +420,7 @@ void AST_Semant_Visitor::visit(Return* node) {
         if(exp_type == TypeKind::CLASS){
             string lclass = return_formal->type->cid->id;
             string rclass = std::get<string>(exp_semant->get_type_par());
-            set<string> ancestors = name_maps->get_ancestors(rclass);
+            set<string> ancestors = name_maps->get_ancestors_ast(rclass);
             ancestors.insert(rclass);
             if (ancestors.find(lclass) == ancestors.end()) {
                 cerr << "Error: inheritance relationship violated in return statement" << "\tPos: " << node->getPos()->print() << endl;
@@ -659,11 +656,11 @@ void AST_Semant_Visitor::visit(CallExp* node) {
 
     // 获取调用对象的类名
     string obj_class_name = std::get<string>(obj_semant->get_type_par());
-    set<string> ancestors = name_maps->get_ancestors(obj_class_name);
+    set<string> ancestors = name_maps->get_ancestors_ast(obj_class_name);
     ancestors.insert(obj_class_name);
     for(auto ancestor_class: ancestors){
         if(name_maps->is_method(ancestor_class, node->name->id)) {
-            vector<Formal*>* formalList = name_maps->get_method_formal_list(ancestor_class, node->name->id);
+            vector<Formal*>* formalList = name_maps->get_method_formal_list_ast(ancestor_class, node->name->id);
             if (node->par && formalList->size() != node->par->size()) {
                 cerr << "Error: Parameter count mismatch in method call." << "\tPos: " << node->getPos()->print() << endl;
                 cerr << "exit program ..." << endl;
@@ -689,7 +686,7 @@ void AST_Semant_Visitor::visit(CallExp* node) {
             semant_map->setSemant(node->name, name_semant);
 
             // 比callStm多的部分 设置语义值
-            Formal* return_formal = name_maps->get_method_formal(ancestor_class, node->name->id, "return_value");
+            Formal* return_formal = name_maps->get_method_formal(ancestor_class, node->name->id, "_^return^_"+node->name->id);
             if(return_formal->type->typeKind == TypeKind::CLASS){
                 variant<monostate, string, int> type_par;
                 type_par = return_formal->type->cid->id;
@@ -737,7 +734,7 @@ void AST_Semant_Visitor::visit(ClassVar* node) {
     }
     // 检查类变量是否存在
     string obj_class_name = std::get<string>(obj_semant->get_type_par());
-    set<string> ancestors = name_maps->get_ancestors(obj_class_name);
+    set<string> ancestors = name_maps->get_ancestors_ast(obj_class_name);
     ancestors.insert(obj_class_name);
     AST_Semant* semant = nullptr;
     for(auto ancestor_class: ancestors){
@@ -868,7 +865,7 @@ void AST_Semant_Visitor::visit(IdExp* node) {
 #endif
     string var = node->id;
     variant<monostate, string, int> type_par;
-    set<string> ancestors = name_maps->get_ancestors(current_class);
+    set<string> ancestors = name_maps->get_ancestors_ast(current_class);
     ancestors.insert(current_class);
     AST_Semant* semant = nullptr;
     for(auto ancestor_class: ancestors){
@@ -934,6 +931,5 @@ void AST_Semant_Visitor::visit(OpExp* node) {
 #endif
     return;
 }
-
 
 // rest of the code

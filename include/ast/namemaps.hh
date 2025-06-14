@@ -22,24 +22,37 @@ private:
     map<pair<string, string>, vector<string>> methodFormalList; //map classname+methodname to formallist of vars
                         //The last is for the return type (pretending to be a Formal)
 public:
+    bool passed_name_maps = true; //to report if there is any error in setting up the name maps
+
     bool is_class(string class_name);
     bool add_class(string class_name); //return false if already exists
+    set<string>* get_class_list();
+
+    bool detected_loop(map<string, string> classHierachy);
     bool add_class_hiearchy(string class_name, string parent_name); //return false if loop found
-    set<string> get_ancestors(string class_name);
+    vector<string>* get_ancestors(string class_name);
+    set<string> get_ancestors_ast(string class_name);
+
     bool is_method(string class_name, string method_name); 
     bool add_method(string class_name, string method_name);  //return false if already exists
-    //MethodDecl* get_method(string method_name, string class_name);
+    set<string>* get_method_list(string class_name);
+
     bool is_class_var(string class_name, string var_name);
     bool add_class_var(string class_name, string var_name, VarDecl* vd);
     VarDecl* get_class_var(string class_name, string var_name);
+    set<string>* get_class_var_list(string class_name);
+
     bool is_method_var(string class_name, string method_name, string var_name);
     bool add_method_var(string class_name, string method_name, string var_name, VarDecl* vd);
     VarDecl* get_method_var(string class_name, string method_name, string var_name);
+    set<string>* get_method_var_list(string class_name, string method_name);
+
     bool is_method_formal(string class_name, string method_name, string var_name);
     bool add_method_formal(string class_name, string method_name, string var_name, Formal* f);
     Formal* get_method_formal(string class_name, string method_name, string var_name);
     bool add_method_formal_list(string class_name, string method_name, vector<string> vl);
-    vector<Formal*>* get_method_formal_list(string class_name, string method_name);
+    vector<string>* get_method_formal_list(string class_name, string method_name);
+    vector<Formal*>* get_method_formal_list_ast(string class_name, string method_name);
 
     void print();
     
@@ -59,43 +72,43 @@ public:
     }
     Name_Maps* getNameMaps() { return name_maps; }
 
-    void visit(Program* node) override;
-    void visit(MainMethod* node) override;
-    void visit(ClassDecl* node) override;
-    void visit(Type *node) override;
-    void visit(VarDecl* node) override;
-    void visit(MethodDecl* node) override;
-    void visit(Formal* node) override;
-    void visit(Nested* node) override;
-    void visit(If* node) override;
-    void visit(While* node) override;
-    void visit(Assign* node) override;
-    void visit(CallStm* node) override;
-    void visit(Continue* node) override;
-    void visit(Break* node) override;
-    void visit(Return* node) override;
-    void visit(PutInt* node) override;
-    void visit(PutCh* node) override;
-    void visit(PutArray* node) override;
-    void visit(Starttime* node) override;
-    void visit(Stoptime* node) override;
-    void visit(BinaryOp* node) override;
-    void visit(UnaryOp* node) override;
-    void visit(ArrayExp* node) override;
-    void visit(CallExp* node) override;
-    void visit(ClassVar* node) override;
-    void visit(BoolExp* node) override;
-    void visit(This* node) override;
-    void visit(Length* node) override;
-    void visit(Esc* node) override;
-    void visit(GetInt* node) override;
-    void visit(GetCh* node) override;
-    void visit(GetArray* node) override;
-    void visit(IdExp* node) override;
-    void visit(OpExp* node) override;
-    void visit(IntExp* node) override;
+    void visit(fdmj::Program* node) override;
+    void visit(fdmj::MainMethod* node) override;
+    void visit(fdmj::ClassDecl* node) override;
+    void visit(fdmj::Type *node) override;
+    void visit(fdmj::VarDecl* node) override;
+    void visit(fdmj::MethodDecl* node) override;
+    void visit(fdmj::Formal* node) override;
+    void visit(fdmj::Nested* node) override;
+    void visit(fdmj::If* node) override;
+    void visit(fdmj::While* node) override;
+    void visit(fdmj::Assign* node) override;
+    void visit(fdmj::CallStm* node) override;
+    void visit(fdmj::Continue* node) override;
+    void visit(fdmj::Break* node) override;
+    void visit(fdmj::Return* node) override;
+    void visit(fdmj::PutInt* node) override;
+    void visit(fdmj::PutCh* node) override;
+    void visit(fdmj::PutArray* node) override;
+    void visit(fdmj::Starttime* node) override;
+    void visit(fdmj::Stoptime* node) override;
+    void visit(fdmj::BinaryOp* node) override;
+    void visit(fdmj::UnaryOp* node) override;
+    void visit(fdmj::ArrayExp* node) override;
+    void visit(fdmj::CallExp* node) override;
+    void visit(fdmj::ClassVar* node) override;
+    void visit(fdmj::BoolExp* node) override;
+    void visit(fdmj::This* node) override;
+    void visit(fdmj::Length* node) override;
+    void visit(fdmj::Esc* node) override;
+    void visit(fdmj::GetInt* node) override;
+    void visit(fdmj::GetCh* node) override;
+    void visit(fdmj::GetArray* node) override;
+    void visit(fdmj::IdExp* node) override;
+    void visit(fdmj::OpExp* node) override;
+    void visit(fdmj::IntExp* node) override;
 };
 
-Name_Maps* makeNameMaps(Program* node);
+Name_Maps* makeNameMaps(fdmj::Program* node);
 
 #endif

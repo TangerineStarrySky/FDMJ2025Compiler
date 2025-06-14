@@ -57,11 +57,11 @@
     string type_kind_string(TypeKind typekind) {
         switch (typekind) {
             case TypeKind::INT:
-                return "Int";
+                return "INT";
             case TypeKind::CLASS:
-                return "Class";
+                return "CLASS";
             case TypeKind::ARRAY:
-                return "IntArray";
+                return "INTARRAY";
             default:
                 return "Unknown";
         }
