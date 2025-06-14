@@ -364,7 +364,7 @@ void Tree2XML::visit(Call* node) {
 
 void Tree2XML::visit(ExtCall* node) {
 #ifdef DEBUG
-    cout << "Visiting ExtCall" << endl;
+    cout << "Visiting ExtCall=" << ((!node)?"NULL!":(static_cast<ExtCall*>(node)->extfun).c_str()) << endl;
 #endif
     if (node == nullptr) {
         visit_result = nullptr;
@@ -374,9 +374,11 @@ void Tree2XML::visit(ExtCall* node) {
     element->SetAttribute("extfun", node->extfun.c_str());
     element->SetAttribute("type", node->type == Type::INT ? "INT" : "PTR");
     tinyxml2::XMLElement* argsElement = doc->NewElement("Arguments");
-    for (auto arg : *node->args) {
-        arg->accept(*this);
-        if (visit_result != nullptr) argsElement->InsertEndChild(visit_result);
+    if (node->args != nullptr) {
+        for (auto arg : *node->args) {
+            arg->accept(*this);
+            if (visit_result != nullptr) argsElement->InsertEndChild(visit_result);
+        }
     }
     element->InsertEndChild(argsElement);
     visit_result = element;
