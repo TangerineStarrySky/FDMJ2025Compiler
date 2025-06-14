@@ -17,9 +17,13 @@
 #include "quad.hh"
 #include "xml2tree.hh"
 #include "tree2quad.hh"
+#include "xml2quad.hh"
+#include "quadssa.hh"
+#include "blocking.hh"
 
 using namespace std;
 using namespace fdmj;
+using namespace quad;
 using namespace tinyxml2;
 
 #define with_location_info false
@@ -44,6 +48,8 @@ int main(int argc, const char *argv[]) {
     string file_irp = file + ".3.irp";
     string file_irp_canon = file + ".3-canon.irp";
     string file_quad = file + ".4.quad";
+    string file_quad_block = file + ".4-block.quad";
+    string file_quad_ssa = file + ".4-ssa.quad";
 
 
     // Parsing the fmj source file
@@ -115,6 +121,39 @@ int main(int argc, const char *argv[]) {
     qo << temp_str;
     qo.flush(); qo.close();
 
+    
+    // Blocking the Quad
+    cout << "Blocking the quad..." << endl;
+    QuadProgram *x4 = blocking(qd);
+    cout << "Saving blocked Quad to: " << file_quad_block << endl;
+    temp_str.clear(); temp_str.reserve(100000);
+    ofstream out_block(file_quad_block);
+    if (!out_block) {
+        cerr << "Error opening file: " << file_quad_block << endl;
+        return EXIT_FAILURE;
+    }
+    x4->print(temp_str, 0, true);
+    out_block << temp_str;
+    out_block.flush(); out_block.close();
+
+    // Converting Quad to Quad-SSA
+    cout << "---0005---Converting Quad to Quad-SSA" << endl;
+    //quad2ssa assumes blocked quad!!!
+    QuadProgram *x5 = quad2ssa(x4);
+    if (x5 == nullptr) {
+        cerr << "Error converting Quad to Quad-SSA" << endl;
+        return EXIT_FAILURE;
+    }
+    cout << "Saving Quad-SSA to: " << file_quad_ssa<< endl;
+    ofstream out_ssa(file_quad_ssa);
+    if (!out_ssa) {
+        cerr << "Error opening file: " << file_quad_ssa << endl;
+        return EXIT_FAILURE;
+    }
+    temp_str.clear(); temp_str.reserve(10000);
+    x5->print(temp_str, 0, true);
+    out_ssa << temp_str;
+    out_ssa.flush(); out_ssa.close();
     cout << "-----Done---" << endl;
 
     return EXIT_SUCCESS;

@@ -83,6 +83,8 @@ enum class QuadKind {
     PHI, RETURN 
 };
 
+string quadKindToString(QuadKind kind);
+
 enum class QuadTermKind { 
     TEMP, CONST, MAME
 };

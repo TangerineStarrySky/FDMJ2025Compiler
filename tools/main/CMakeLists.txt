@@ -12,6 +12,7 @@ target_link_libraries(${MAIN} PUBLIC
   ast
   util
   quad
+  quadflow
   ir
   vendor_xml
 )

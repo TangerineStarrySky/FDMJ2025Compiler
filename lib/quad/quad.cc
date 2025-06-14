@@ -10,6 +10,25 @@
 using namespace std;
 using namespace quad;
 
+string quad::quadKindToString(QuadKind kind) {
+    switch (kind) {
+        case QuadKind::MOVE: return "MOVE";
+        case QuadKind::LOAD: return "LOAD";
+        case QuadKind::STORE: return "STORE";
+        case QuadKind::MOVE_BINOP: return "MOVE_BINOP";
+        case QuadKind::CALL: return "CALL";
+        case QuadKind::EXTCALL: return "EXTCALL";
+        case QuadKind::MOVE_CALL: return "MOVE_CALL";
+        case QuadKind::MOVE_EXTCALL: return "MOVE_EXTCALL";
+        case QuadKind::LABEL: return "LABEL";
+        case QuadKind::JUMP: return "JUMP";
+        case QuadKind::CJUMP: return "CJUMP";
+        case QuadKind::PHI: return "PHI";
+        case QuadKind::RETURN: return "RETURN";
+        default: return "UNKNOWN";
+    }
+}
+
 std::string QuadTerm::print() {
 #ifdef DEBUG
     cout << "In QuadTerm::print" << endl;
@@ -407,16 +426,26 @@ void QuadPhi::print(string &use_str, int indent, bool to_print_def_use) {
     cout << "In QuadPhi::print" << endl;
 #endif
     TempExp *phi_temp = this->temp;
-    string phi_str = print_indent(indent) + "PHI " + print_temp(phi_temp) + " <- (";
+    use_str += print_indent(indent);
+    use_str += "PHI ";
+    use_str += print_temp(phi_temp);
+    use_str += " <- (";
     bool first = true;
+    if (this->args == nullptr) {
+        use_str += "NULL";
+        use_str += "); ";
+        use_str += (to_print_def_use? print_def_use(this->def, this->use) : "");
+        use_str += "\n";
+        return ;
+    }
     for (int i=0; i< this->args->size(); i++) {
         Temp *arg_temp = this->args->at(i).first;
         Label *arg_label = this->args->at(i).second;
+        use_str += (first?"":"; ");
         use_str += "t";
         use_str += to_string(arg_temp->num);
         use_str +=  ", ";
         use_str +=  print_label(arg_label);
-        use_str += (first?"":"; ");
         first = false;
     }
     use_str += "); ";

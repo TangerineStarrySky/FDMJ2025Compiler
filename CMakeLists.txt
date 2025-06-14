@@ -11,6 +11,7 @@ include_directories(include/frontend)
 include_directories(include/ast)
 include_directories(include/ir)
 include_directories(include/quad)
+include_directories(include/quadflow)
 include_directories(include/util)
 include_directories(vendor/tinyxml2)
 
