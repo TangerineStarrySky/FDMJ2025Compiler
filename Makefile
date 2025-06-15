@@ -1,25 +1,19 @@
 RM       = rm -rf
 MAKEFLAGS = --no-print-directory
 
-BUILD_DIR = $(CURDIR)/build
-TEST_DIR = $(CURDIR)/test
-MAIN_EXE = $(BUILD_DIR)/tools/main/main
+.PHONY: build clean rebuild handin
 
-.PHONY: build clean veryclean rebuild handin
+BUILD_DIR = $(CURDIR)/build
 
 build:
 	@cmake -G Ninja -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=Release; \
 	cd $(BUILD_DIR) && ninja
 
-clean:
-	@find $(TEST_DIR) -type f \( \
-		-name "*.ast" -o -name "*.out"\
-		\) -exec $(RM) {} \;
+clean: 
+	@$(RM) build ; \
+	$(RM) test/*5.* \
 
-veryclean: clean 
-	@$(RM) $(BUILD_DIR)
-
-rebuild: veryclean build
+rebuild: clean build
 
 handin:
 	@if [ ! -f docs/report.pdf ]; then \
@@ -28,25 +22,30 @@ handin:
 	fi; \
 	echo "请输入'学号-姓名' (例如: 12345678910-某个人)"; \
 	read filename; \
-	zip -q -r "docs/$$filename-hw3.zip" \
+	zip -q -r "docs/$$filename-final.zip" \
 	  docs/report.pdf include lib
 
-.PHONY: run run-one
+.PHONY: run run-one gentests gentest-one patchdemo 
 
-run: $(MAIN_EXE)
-	cd $(TEST_DIR) && \
+MAIN = $(BUILD_DIR)/tools/main/main
+
+run-assem: $(MAIN)
+	cd $(CURDIR)/test && \
 	for file in $$(ls .); do \
-        if [ "$${file##*.}" = "fmj" ]; then \
-            echo "Parsing $${file%%.*}"; \
-			$(MAIN_EXE) "$${file%%.*}"; \
-        fi \
+		if [ "$${file#*.}" = "6-xml.clr" ]; then \
+			echo "------Reading $${file%%.*}------"; \
+			arm-linux-gnueabihf-gcc -mcpu=cortex-a72 -Wall -Wextra --static -o "$${file%%.*}" "$${file%%.*}.s" ../vendor/libsysy/libsysy32.s -lm; \
+			echo "Running the final assembly program........." ; \
+			qemu-arm -B 0x1000 $${file%%.*}; \
+		fi; \
 	done; \
 	cd .. > /dev/null 2>&1 
 
-FILE = test1
+FILE=bubblesort
 
-run-one: $(MAIN_EXE)
-	cd $(TEST_DIR) && \
-	echo "Parsing ${FILE}.fmj"; \
-	$(MAIN_EXE) "${FILE}"; \
+run-one-assem: $(MAIN)
+	cd $(CURDIR)/test && \
+    arm-linux-gnueabihf-gcc -mcpu=cortex-a72 -Wall -Wextra --static -o "${FILE}" "${FILE}.s" ../vendor/libsysy/libsysy32.s -lm; \
+	echo "Running the final assembly program........." ; \
+	qemu-arm -B 0x1000 ${FILE}; \
 	cd .. > /dev/null 2>&1 
