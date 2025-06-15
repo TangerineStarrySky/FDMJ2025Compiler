@@ -949,7 +949,10 @@ void ASTToTreeVisitor::visit(fdmj::Length* node) {
     #endif
     node->exp->accept(*this);
     tree::Exp* arr = visit_exp_result->unEx(tm)->exp;
-    visit_exp_result = new Tr_ex(new tree::ExtCall(tree::Type::INT, "length", new vector<tree::Exp*>{arr}));
+    tree::TempExp* arr_length = new tree::TempExp(tree::Type::INT, tm->newtemp());
+    tree::Exp* length_exp = new tree::Eseq(tree::Type::INT, new tree::Move(arr_length, new tree::Mem(tree::Type::INT, arr)), arr_length);
+    visit_exp_result = new Tr_ex(length_exp);
+    // visit_exp_result = new Tr_ex(new tree::ExtCall(tree::Type::INT, "length", new vector<tree::Exp*>{arr}));
     visit_tree_result = nullptr;
 }
 
