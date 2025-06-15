@@ -115,6 +115,9 @@ class QuadTerm {
     TempExp *get_temp();
     int get_const();
     string get_name();
+    
+    // Clone function for QuadTerm
+    QuadTerm* clone() const;
 };
 
 class Quad {
@@ -123,6 +126,7 @@ class Quad {
     tree::Tree *node; //just in case we nedd to access the original tree node 
     virtual void print(string &output_str, int indent, bool print_def_use) = 0;
     virtual void accept(QuadVisitor &v) = 0;
+    virtual Quad* clone() const = 0; // Abstract clone method
     Quad(QuadKind k, tree::Tree *node) : kind(k), node(node) {}
 };
 
@@ -131,8 +135,11 @@ class QuadProgram : public Quad {
     vector<QuadFuncDecl*> *quadFuncDeclList;
     QuadProgram(tree::Program *node, vector<QuadFuncDecl*> *quadFuncDeclList) 
         : Quad(QuadKind::PROGRAM, node), quadFuncDeclList(quadFuncDeclList) {}
-    void accept(QuadVisitor &v) {v.visit(this);}
+    void accept(QuadVisitor &v) override {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadProgram* clone() const override;
 };
 
 class QuadFuncDecl : public Quad {
@@ -144,8 +151,11 @@ class QuadFuncDecl : public Quad {
     int last_temp_num;
     QuadFuncDecl(Tree *node, string funcname, vector<Temp*> *params, vector<QuadBlock*> *quadblocklist, int lln, int ltn)
         : Quad(QuadKind::FUNCDECL, node), params(params), quadblocklist(quadblocklist), funcname(funcname), last_label_num(lln), last_temp_num(ltn) {}
-    void accept(QuadVisitor &v) {v.visit(this);}
+    void accept(QuadVisitor &v) override {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadFuncDecl* clone() const override;
 };
 
 class QuadBlock : public Quad {
@@ -155,8 +165,11 @@ class QuadBlock : public Quad {
     vector<QuadStm*> *quadlist;
     QuadBlock(Tree *node, vector<QuadStm*> *quadlist, Label *entry_label, vector<tree::Label*> *exit_labels)
         : Quad(QuadKind::BLOCK, node), entry_label(entry_label), exit_labels(exit_labels), quadlist(quadlist) {}
-    void accept(QuadVisitor &v) {v.visit(this);}
+    void accept(QuadVisitor &v) override {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadBlock* clone() const override;
 };
 
 class QuadStm : public Quad {
@@ -168,6 +181,9 @@ class QuadStm : public Quad {
         : Quad(k, node), kind(k), def(def), use(use) {}
     virtual void accept(QuadVisitor &v) = 0;
     virtual void print(string &output_str, int indent, bool print_def_use) = 0;
+    
+    // Helper method for cloning def/use sets
+    set<Temp*>* cloneTemps(const set<Temp*>* temps) const;
 };
 
 class QuadMove : public QuadStm{
@@ -178,6 +194,9 @@ class QuadMove : public QuadStm{
         : QuadStm(QuadKind::MOVE, node, def, use), dst(dst), src(src) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadMove* clone() const override;
 };
 
 class QuadLoad : public QuadStm{
@@ -188,6 +207,9 @@ class QuadLoad : public QuadStm{
         : QuadStm(QuadKind::LOAD, node, def, use), dst(dst), src(src) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadLoad* clone() const override;
 };
 
 class QuadStore : public QuadStm{
@@ -198,6 +220,9 @@ class QuadStore : public QuadStm{
         : QuadStm(QuadKind::STORE, node, def, use), src(src), dst(dst) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadStore* clone() const override;
 };
 
 class QuadMoveBinop : public QuadStm{
@@ -210,6 +235,9 @@ class QuadMoveBinop : public QuadStm{
         : QuadStm(QuadKind::MOVE_BINOP, node, def, use), dst(dst), left(left), binop(binop), right(right) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadMoveBinop* clone() const override;
 };
 
 //Call is always a load a call result to a temp
@@ -218,11 +246,13 @@ class QuadCall : public QuadStm{
     string name;
     QuadTerm *obj_term;
     vector<QuadTerm*> *args;
-    TempExp *result_temp;
-    QuadCall(Tree *node, TempExp *result_temp, string name, QuadTerm *obj_term, vector<QuadTerm*> *args, set<Temp*> *def, set<Temp*> *use) 
-        : QuadStm(QuadKind::CALL, node, def, use), result_temp(result_temp), name(name), obj_term(obj_term), args(args) {}
+    QuadCall(Tree *node, string name, QuadTerm *obj_term, vector<QuadTerm*> *args, set<Temp*> *def, set<Temp*> *use) 
+        : QuadStm(QuadKind::CALL, node, def, use), name(name), obj_term(obj_term), args(args) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadCall* clone() const override;
 };
 
 class QuadMoveCall : public QuadStm{
@@ -233,17 +263,22 @@ class QuadMoveCall : public QuadStm{
         : QuadStm(QuadKind::MOVE_CALL, node, def, use), dst(dst), call(call) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadMoveCall* clone() const override;
 };
 
 class QuadExtCall : public QuadStm{
   public:
     string extfun;
     vector<QuadTerm*> *args;
-    TempExp *result_temp;
-    QuadExtCall(Tree *node, TempExp *result_temp, string extfun, vector<QuadTerm*> *args, set<Temp*> *def, set<Temp*> *use) 
-        : QuadStm(QuadKind::EXTCALL, node, def, use), extfun(extfun), result_temp(result_temp), args(args) {}
+    QuadExtCall(Tree *node, string extfun, vector<QuadTerm*> *args, set<Temp*> *def, set<Temp*> *use) 
+        : QuadStm(QuadKind::EXTCALL, node, def, use), extfun(extfun), args(args) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadExtCall* clone() const override;
 };
 
 class QuadMoveExtCall : public QuadStm{
@@ -254,6 +289,9 @@ class QuadMoveExtCall : public QuadStm{
         : QuadStm(QuadKind::MOVE_EXTCALL, node, def, use), dst(dst), extcall(extcall) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadMoveExtCall* clone() const override;
 };
 
 class QuadLabel : public QuadStm{
@@ -263,6 +301,9 @@ class QuadLabel : public QuadStm{
         : QuadStm(QuadKind::LABEL, node, def, use), label(label) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadLabel* clone() const override;
 };
 
 class QuadJump : public QuadStm{
@@ -272,6 +313,9 @@ class QuadJump : public QuadStm{
         : QuadStm(QuadKind::JUMP, node, def, use), label(label) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadJump* clone() const override;
 };
 
 class QuadCJump : public QuadStm{
@@ -284,6 +328,9 @@ class QuadCJump : public QuadStm{
         : QuadStm(QuadKind::CJUMP, node, def, use), relop(relop), left(left), right(right), t(t), f(f) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadCJump* clone() const override;
 };
 
 class QuadPhi : public QuadStm {
@@ -294,6 +341,9 @@ class QuadPhi : public QuadStm {
         : QuadStm(QuadKind::PHI, node, def, use), temp(temp), args(args) {}
     void accept(QuadVisitor &v) {v.visit(this);};
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadPhi* clone() const override;
 };
 
 class QuadReturn : public QuadStm{
@@ -303,8 +353,13 @@ class QuadReturn : public QuadStm{
         : QuadStm(QuadKind::RETURN, node, def, use), value(value) {}
     void accept(QuadVisitor &v) {v.visit(this);}
     void print(string &output_str, int indent, bool print_def_use) override;
+    
+    // Clone function
+    QuadReturn* clone() const override;
 };
 
 } //namespace quad
+
+void quad2file(quad::Quad *quad, string filename, bool print_def_use);
 
 #endif

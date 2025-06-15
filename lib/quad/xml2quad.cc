@@ -241,7 +241,7 @@ static QuadStm* parseStatement(XMLElement* element) {
             }
         }
         
-        return new QuadCall(nullptr, nullptr, funcName, objTerm, args, def, use);
+        return new QuadCall(nullptr, funcName, objTerm, args, def, use);
     } 
     else if (strcmp(kind, "MOVE_CALL") == 0) {
         const char* dstName = element->Attribute("dst");
@@ -278,7 +278,7 @@ static QuadStm* parseStatement(XMLElement* element) {
             }
         }
         
-        return new QuadExtCall(nullptr, nullptr, extFun, args, def, use);
+        return new QuadExtCall(nullptr, extFun, args, def, use);
     } 
     else if (strcmp(kind, "MOVE_EXTCALL") == 0) {
         const char* dstName = element->Attribute("dst");

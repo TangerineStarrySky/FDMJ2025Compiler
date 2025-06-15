@@ -164,7 +164,7 @@ void Tree2Quad::visit(Move* node) {
         node->dst->accept(*this);
         TempExp *dst = output_term->get_temp();
         def->insert(dst->temp);
-        QuadExtCall *quadExtCall = new QuadExtCall(node, dst, node_extcall->extfun, args, def, use);
+        QuadExtCall *quadExtCall = new QuadExtCall(node, node_extcall->extfun, args, def, use);
         visit_result->push_back(new QuadMoveExtCall(node, dst, quadExtCall, def, use));
     } else if(tree::Call* node_call = dynamic_cast<tree::Call*>(node->src)) {
         // cout << "call" << endl;
@@ -184,7 +184,7 @@ void Tree2Quad::visit(Move* node) {
         node->dst->accept(*this);
         TempExp *dst = output_term->get_temp();
         def->insert(dst->temp);
-        QuadCall *quadCall = new QuadCall(node, dst, node_call->id, obj_term, args, def, use);
+        QuadCall *quadCall = new QuadCall(node, node_call->id, obj_term, args, def, use);
         visit_result->push_back(new QuadMoveCall(node, dst, quadCall, def, use));
     } else if(tree::Binop* node_binop = dynamic_cast<tree::Binop*>(node->src)) {
         // cout << "binop" << endl;
@@ -420,7 +420,7 @@ void Tree2Quad::visit(Call* node) {
     }
     // TempExp* dst = new TempExp(node->type, temp_map->newtemp());
     // def->insert(dst->temp);
-    visit_result->push_back(new QuadCall(node, nullptr, node->id, obj_term, args, def, use));
+    visit_result->push_back(new QuadCall(node, node->id, obj_term, args, def, use));
     output_term = nullptr;
 }
 
@@ -444,6 +444,6 @@ void Tree2Quad::visit(ExtCall* node) {
     }
     // TempExp* dst = new TempExp(node->type, temp_map->newtemp());
     // def->insert(dst->temp);
-    visit_result->push_back(new QuadExtCall(node, nullptr, node->extfun, args, def, use));
+    visit_result->push_back(new QuadExtCall(node, node->extfun, args, def, use));
     output_term = nullptr;
 }

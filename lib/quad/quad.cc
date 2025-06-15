@@ -2,6 +2,8 @@
 #undef DEBUG
 
 #include <iostream>
+#include <fstream>
+#include <cstring>
 #include <string>
 #include <set>
 #include "quad.hh"
@@ -64,6 +66,24 @@ string QuadTerm::get_name() {
         return get<std::string>(term);
     }
     return nullptr;
+}
+
+QuadTerm* QuadTerm::clone() const {
+    switch (kind) {
+        case QuadTermKind::TEMP: {
+            TempExp* temp = std::get<TempExp*>(term);
+            if (temp) {
+                return new QuadTerm(new TempExp(temp->type, new Temp(temp->temp->num)));
+            }
+            return nullptr;
+        }
+        case QuadTermKind::CONST:
+            return new QuadTerm(std::get<int>(term));
+        case QuadTermKind::MAME:
+            return new QuadTerm(std::get<string>(term));
+        default:
+            return nullptr;
+    }
 }
 
 static string print_indent(int indent) {
@@ -134,14 +154,16 @@ static std::string print_call(QuadCall *call) {
     vector<QuadTerm*> *args = call->args;
     use_str += call->name;
     use_str += "[";
-    use_str +=  obj_term->print();
+    if (obj_term)
+        use_str +=  obj_term->print();
     use_str += "] (";
     bool first = true;
-    for (auto arg : *args) {
-        use_str += (first?"":", ");
-        use_str += arg->print();
-        first = false;
-    }
+    if (args)
+        for (auto arg : *args) {
+            use_str += (first?"":", ");
+            use_str += arg->print();
+            first = false;
+        }
     use_str += "); " ;
     return use_str;
 }
@@ -164,6 +186,18 @@ string print_extcall(QuadExtCall *call) {
     return use_str;
 }
 
+set<Temp*>* QuadStm::cloneTemps(const set<Temp*>* temps) const {
+    if (!temps) return nullptr;
+    
+    set<Temp*>* newTemps = new set<Temp*>();
+    for (auto temp : *temps) {
+        if (temp) {
+            newTemps->insert(new Temp(temp->num));
+        }
+    }
+    return newTemps;
+}
+
 void QuadProgram::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadProgram::print: " <<  (this->kind == QuadKind::PROGRAM?"Program!":"Oh?") << endl;
@@ -180,6 +214,18 @@ void QuadProgram::print(string &use_str, int indent, bool to_print_def_use) {
         func->print(use_str, indent, to_print_def_use);
     }
     return ;
+}
+
+QuadProgram* QuadProgram::clone() const {
+    vector<QuadFuncDecl*>* newFuncList = new vector<QuadFuncDecl*>();
+    if (quadFuncDeclList) {
+        for (auto funcDecl : *quadFuncDeclList) {
+            if (funcDecl) {
+                newFuncList->push_back(static_cast<QuadFuncDecl*>(funcDecl->clone()));
+            }
+        }
+    }
+    return new QuadProgram(static_cast<tree::Program*>(node), newFuncList);
 }
 
 void QuadFuncDecl::print(string &use_str, int indent, bool to_print_def_use) {
@@ -213,6 +259,28 @@ void QuadFuncDecl::print(string &use_str, int indent, bool to_print_def_use) {
     return ;
 }
 
+QuadFuncDecl* QuadFuncDecl::clone() const {
+    vector<Temp*>* newParams = new vector<Temp*>();
+    if (params) {
+        for (auto param : *params) {
+            if (param) {
+                newParams->push_back(new Temp(param->num));
+            }
+        }
+    }
+    
+    vector<QuadBlock*>* newBlockList = new vector<QuadBlock*>();
+    if (quadblocklist) {
+        for (auto block : *quadblocklist) {
+            if (block) {
+                newBlockList->push_back(static_cast<QuadBlock*>(block->clone()));
+            }
+        }
+    }
+    
+    return new QuadFuncDecl(node, funcname, newParams, newBlockList, last_label_num, last_temp_num);
+}
+
 void QuadBlock::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadBlock::print" << endl;
@@ -236,6 +304,30 @@ void QuadBlock::print(string &use_str, int indent, bool to_print_def_use) {
     return ;
 }
 
+QuadBlock* QuadBlock::clone() const {
+    Label* newEntryLabel = entry_label ? new Label(entry_label->num) : nullptr;
+    
+    vector<tree::Label*>* newExitLabels = new vector<tree::Label*>();
+    if (exit_labels) {
+        for (auto label : *exit_labels) {
+            if (label) {
+                newExitLabels->push_back(new Label(label->num));
+            }
+        }
+    }
+    
+    vector<QuadStm*>* newQuadList = new vector<QuadStm*>();
+    if (quadlist) {
+        for (auto stmt : *quadlist) {
+            if (stmt) {
+                newQuadList->push_back(static_cast<QuadStm*>(stmt->clone()));
+            }
+        }
+    }
+    
+    return new QuadBlock(node, newQuadList, newEntryLabel, newExitLabels);
+}
+
 void QuadMove::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadMove::print" << endl;
@@ -253,6 +345,12 @@ void QuadMove::print(string &use_str, int indent, bool to_print_def_use) {
     return ;
 }
 
+QuadMove* QuadMove::clone() const {
+    TempExp* newDst = dst ? new TempExp(dst->type, new Temp(dst->temp->num)) : nullptr;
+    QuadTerm* newSrc = src ? src->clone() : nullptr;
+    return new QuadMove(node, newDst, newSrc, cloneTemps(def), cloneTemps(use));
+}
+
 void QuadLoad::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadLoad::print" << endl;
@@ -267,6 +365,12 @@ void QuadLoad::print(string &use_str, int indent, bool to_print_def_use) {
     use_str += (to_print_def_use? print_def_use(this->def, this->use) : "");
     use_str += "\n";
     return;
+}
+
+QuadLoad* QuadLoad::clone() const {
+    TempExp* newDst = dst ? new TempExp(dst->type, new Temp(dst->temp->num)) : nullptr;
+    QuadTerm* newSrc = src ? src->clone() : nullptr;
+    return new QuadLoad(node, newDst, newSrc, cloneTemps(def), cloneTemps(use));
 }
 
 //store is term->mem(term)
@@ -286,6 +390,12 @@ void QuadStore::print(string &use_str, int indent, bool to_print_def_use) {
     use_str += (to_print_def_use? print_def_use(this->def, this->use) : "");
     use_str += "\n";
     return;
+}
+
+QuadStore* QuadStore::clone() const {
+    QuadTerm* newSrc = src ? src->clone() : nullptr;
+    QuadTerm* newDst = dst ? dst->clone() : nullptr;
+    return new QuadStore(node, newSrc, newDst, cloneTemps(def), cloneTemps(use));
 }
         
 void QuadMoveBinop::print(string &use_str, int indent, bool to_print_def_use) {
@@ -312,6 +422,13 @@ void QuadMoveBinop::print(string &use_str, int indent, bool to_print_def_use) {
     return ;
 }
 
+QuadMoveBinop* QuadMoveBinop::clone() const {
+    TempExp* newDst = dst ? new TempExp(dst->type, new Temp(dst->temp->num)) : nullptr;
+    QuadTerm* newLeft = left ? left->clone() : nullptr;
+    QuadTerm* newRight = right ? right->clone() : nullptr;
+    return new QuadMoveBinop(node, newDst, newLeft, binop, newRight, cloneTemps(def), cloneTemps(use));
+}
+
 void QuadCall::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadCall::print" << endl;
@@ -323,6 +440,21 @@ void QuadCall::print(string &use_str, int indent, bool to_print_def_use) {
         use_str += (to_print_def_use? print_def_use(this->def, this->use) : "");
         use_str += "\n";
         return;
+}
+
+QuadCall* QuadCall::clone() const {
+    QuadTerm* newObjTerm = obj_term ? obj_term->clone() : nullptr;
+    
+    vector<QuadTerm*>* newArgs = new vector<QuadTerm*>();
+    if (args) {
+        for (auto arg : *args) {
+            if (arg) {
+                newArgs->push_back(arg->clone());
+            }
+        }
+    }
+    
+    return new QuadCall(node, name, newObjTerm, newArgs, cloneTemps(def), cloneTemps(use));
 }
 
 void QuadMoveCall::print(string &use_str, int indent, bool to_print_def_use) {
@@ -341,6 +473,12 @@ void QuadMoveCall::print(string &use_str, int indent, bool to_print_def_use) {
     return;
 }
 
+QuadMoveCall* QuadMoveCall::clone() const {
+    TempExp* newDst = dst ? new TempExp(dst->type, new Temp(dst->temp->num)) : nullptr;
+    QuadCall* newCall = call ? static_cast<QuadCall*>(call->clone()) : nullptr;
+    return new QuadMoveCall(node, newDst, newCall, cloneTemps(def), cloneTemps(use));
+}
+
 void QuadExtCall::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadExtCall::print" << endl;
@@ -352,6 +490,19 @@ void QuadExtCall::print(string &use_str, int indent, bool to_print_def_use) {
     use_str += (to_print_def_use? print_def_use(this->def, this->use) : "");
     use_str += "\n";
     return;
+}
+
+QuadExtCall* QuadExtCall::clone() const {
+    vector<QuadTerm*>* newArgs = new vector<QuadTerm*>();
+    if (args) {
+        for (auto arg : *args) {
+            if (arg) {
+                newArgs->push_back(arg->clone());
+            }
+        }
+    }
+    
+    return new QuadExtCall(node, extfun, newArgs, cloneTemps(def), cloneTemps(use));
 }
         
 void QuadMoveExtCall::print(string &use_str, int indent, bool to_print_def_use) {
@@ -370,6 +521,12 @@ void QuadMoveExtCall::print(string &use_str, int indent, bool to_print_def_use) 
     return;
 }
 
+QuadMoveExtCall* QuadMoveExtCall::clone() const {
+    TempExp* newDst = dst ? new TempExp(dst->type, new Temp(dst->temp->num)) : nullptr;
+    QuadExtCall* newExtCall = extcall ? static_cast<QuadExtCall*>(extcall->clone()) : nullptr;
+    return new QuadMoveExtCall(node, newDst, newExtCall, cloneTemps(def), cloneTemps(use));
+}
+
 void QuadLabel::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadLabel::print" << endl;
@@ -383,6 +540,11 @@ void QuadLabel::print(string &use_str, int indent, bool to_print_def_use) {
     return;
 }
 
+QuadLabel* QuadLabel::clone() const {
+    Label* newLabel = label ? new Label(label->num) : nullptr;
+    return new QuadLabel(node, newLabel, cloneTemps(def), cloneTemps(use));
+}
+
 void QuadJump::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadJump::print" << endl;
@@ -394,6 +556,11 @@ void QuadJump::print(string &use_str, int indent, bool to_print_def_use) {
     use_str += (to_print_def_use? print_def_use(this->def, this->use) : "");
     use_str += "\n";
     return;
+}
+
+QuadJump* QuadJump::clone() const {
+    Label* newLabel = label ? new Label(label->num) : nullptr;
+    return new QuadJump(node, newLabel, cloneTemps(def), cloneTemps(use));
 }
 
 void QuadCJump::print(string &use_str, int indent, bool to_print_def_use) {
@@ -419,6 +586,15 @@ void QuadCJump::print(string &use_str, int indent, bool to_print_def_use) {
     use_str += (to_print_def_use? print_def_use(this->def, this->use) : "");
     use_str += "\n";
     return;
+}
+
+QuadCJump* QuadCJump::clone() const {
+    QuadTerm* newLeft = left ? left->clone() : nullptr;
+    QuadTerm* newRight = right ? right->clone() : nullptr;
+    Label* newTrue = t ? new Label(t->num) : nullptr;
+    Label* newFalse = f ? new Label(f->num) : nullptr;
+    
+    return new QuadCJump(node, relop, newLeft, newRight, newTrue, newFalse, cloneTemps(def), cloneTemps(use));
 }
 
 void QuadPhi::print(string &use_str, int indent, bool to_print_def_use) {
@@ -454,6 +630,21 @@ void QuadPhi::print(string &use_str, int indent, bool to_print_def_use) {
     return ;
 }
 
+QuadPhi* QuadPhi::clone() const {
+    TempExp* newTemp = temp ? new TempExp(temp->type, new Temp(temp->temp->num)) : nullptr;
+    
+    vector<pair<Temp*, Label*>>* newArgs = new vector<pair<Temp*, Label*>>();
+    if (args) {
+        for (auto& arg : *args) {
+            Temp* newArgTemp = arg.first ? new Temp(arg.first->num) : nullptr;
+            Label* newArgLabel = arg.second ? new Label(arg.second->num) : nullptr;
+            newArgs->push_back(make_pair(newArgTemp, newArgLabel));
+        }
+    }
+    
+    return new QuadPhi(node, newTemp, newArgs, cloneTemps(def), cloneTemps(use));
+}
+
 void QuadReturn::print(string &use_str, int indent, bool to_print_def_use) {
 #ifdef DEBUG
     cout << "In QuadReturn::print" << endl;  
@@ -466,4 +657,29 @@ void QuadReturn::print(string &use_str, int indent, bool to_print_def_use) {
     use_str += (to_print_def_use? print_def_use(this->def, this->use) : "");
     use_str += "\n";
     return ;
+}
+
+QuadReturn* QuadReturn::clone() const {
+    QuadTerm* newValue = value ? value->clone() : nullptr;
+    return new QuadReturn(node, newValue, cloneTemps(def), cloneTemps(use));
+}
+
+void quad2file(Quad *quad, string filename, bool print_def_use) {
+#ifdef DEBUG
+    cout << "In quad2file, writing to: " << filename << endl;
+#endif
+    if (quad == nullptr) {
+        cerr << "Error: Quad is null!" << endl;
+        return;
+    }
+    std::string output_str; output_str.reserve(10000);
+    quad->print(output_str, 0, print_def_use);
+    std::ofstream out(filename);
+    if (out.is_open()) {
+        out<< output_str;
+        out.close();
+    } else {
+        cerr << "Error: Unable to open file " << filename << endl;
+    }
+    return;
 }

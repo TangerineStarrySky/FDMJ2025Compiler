@@ -20,6 +20,8 @@
 #include "xml2quad.hh"
 #include "quadssa.hh"
 #include "blocking.hh"
+#include "prepareregalloc.hh"
+#include "regalloc.hh"
 
 using namespace std;
 using namespace fdmj;
@@ -33,14 +35,15 @@ fdmj::Program *prog();
 
 int main(int argc, const char *argv[]) {
     string file;
-    const bool debug = argc > 1 && std::strcmp(argv[1], "--debug") == 0;
+    int number_of_colors = 5; //default 9: r0-r8
+    const bool noc = argc > 1 && std::strcmp(argv[1], "-k") == 0;
 
-    if ((!debug && argc != 2) || (debug && argc != 3)) {
-        cerr << "Usage: " << argv[0] << " [--debug] filename" << endl;
+    if ((!noc && argc != 2) || (noc && argc != 4)) {
+        cerr << "Usage: " << argv[0] << " [-k #colors] filename" << endl;
         return EXIT_FAILURE;
     }
-
     file = argv[argc - 1];
+    if (argc == 4) number_of_colors = stoi(argv[2]);
 
     // boilerplate output filenames (used throughout the compiler pipeline)
     string file_fmj = file + ".fmj"; // input source file
@@ -49,7 +52,9 @@ int main(int argc, const char *argv[]) {
     string file_irp_canon = file + ".3-canon.irp";
     string file_quad = file + ".4.quad";
     string file_quad_block = file + ".4-block.quad";
-    string file_quad_ssa = file + ".4-ssa.quad";
+    string file_quad_ssa = file + ".5-ssa.quad";
+    string file_quad_prepared = file + ".5-prepared.quad";
+    string file_quad_color_xml = file + ".6-xml.clr";
 
 
     // Parsing the fmj source file
@@ -64,13 +69,9 @@ int main(int argc, const char *argv[]) {
 
     // Semantic analysis
     std::cout << "---0002---Semantic analysis..." << std::endl;
-    // std::cout << "--Making Name Maps..." << endl;
     Name_Maps *name_maps = makeNameMaps(root); 
-    // std::cout << "--Analyzing Semantics..." << endl;
     AST_Semant_Map *semant_map = semant_analyze(root); 
     semant_map->setNameMaps(name_maps);
-    // semant_map->getNameMaps()->print();
-    // cout << "Convert AST to XML with Semantic Info..." << endl;
     cout << "Saving AST (XML) with Semantic Info to: " << file_ast_semant << endl;
     XMLDocument * x = ast2xml(root, semant_map, with_location_info, true);
     if (x->Error()) {
@@ -89,13 +90,6 @@ int main(int argc, const char *argv[]) {
     x->SaveFile(file_irp.c_str());
 
 
-    // cout << "Reading IR (XML) from: " << file_irp << endl;
-    // ir = xml2tree(file_irp);
-    // if (ir == NULL) {
-    //     cerr << "Error: " << file_irp << " not found or IR ill-formed" << endl;
-    //     return EXIT_FAILURE;
-    // }
-
     // Canonicalization of IR
     cout << "Canonicalization..." << endl;
     tree::Program *ir_canon = canon(ir);
@@ -103,6 +97,7 @@ int main(int argc, const char *argv[]) {
     XMLDocument *doc = tree2xml(ir_canon);
     doc->SaveFile(file_irp_canon.c_str());
     
+
     // Converting IR to Quad
     cout << "---0004---Converting IR to Quad" << endl;
     QuadProgram *qd = tree2quad(ir_canon);
@@ -110,50 +105,43 @@ int main(int argc, const char *argv[]) {
         cerr << "Error converting IR to Quad" << endl;
         return EXIT_FAILURE;
     }
-    string temp_str; temp_str.reserve(50000);
-    qd->print(temp_str, 0, true);
     cout << "Saving Quad to: " << file_quad << endl;
-    ofstream qo(file_quad);
-    if (!qo) {
-        cerr << "Error opening file: " << file_quad << endl;
-        return EXIT_FAILURE;
-    }
-    qo << temp_str;
-    qo.flush(); qo.close();
+    quad2file(qd, file_quad.c_str(), true); //write the quad to a file
 
     
     // Blocking the Quad
     cout << "Blocking the quad..." << endl;
     QuadProgram *x4 = blocking(qd);
     cout << "Saving blocked Quad to: " << file_quad_block << endl;
-    temp_str.clear(); temp_str.reserve(100000);
-    ofstream out_block(file_quad_block);
-    if (!out_block) {
-        cerr << "Error opening file: " << file_quad_block << endl;
-        return EXIT_FAILURE;
-    }
-    x4->print(temp_str, 0, true);
-    out_block << temp_str;
-    out_block.flush(); out_block.close();
+    quad2file(x4, file_quad_block.c_str(), true); //write the blocked quad to a file
+
 
     // Converting Quad to Quad-SSA
     cout << "---0005---Converting Quad to Quad-SSA" << endl;
-    //quad2ssa assumes blocked quad!!!
-    QuadProgram *x5 = quad2ssa(x4);
+    QuadProgram *x5 = quad2ssa(x4);  //quad2ssa assumes blocked quad!!!
     if (x5 == nullptr) {
         cerr << "Error converting Quad to Quad-SSA" << endl;
         return EXIT_FAILURE;
     }
     cout << "Saving Quad-SSA to: " << file_quad_ssa<< endl;
-    ofstream out_ssa(file_quad_ssa);
-    if (!out_ssa) {
-        cerr << "Error opening file: " << file_quad_ssa << endl;
-        return EXIT_FAILURE;
-    }
-    temp_str.clear(); temp_str.reserve(10000);
-    x5->print(temp_str, 0, true);
-    out_ssa << temp_str;
-    out_ssa.flush(); out_ssa.close();
+    quad2file(x5, file_quad_ssa.c_str(), true); //write the quad-ssa to a file
+
+    
+    // Preparing the Quad for Register Allocation
+    cout << "Preparing Quad for Register Allocation..." << endl;
+    QuadProgram *x6 = prepareRegAlloc(x5); //using registers to prepare the quad for RPI
+    cout << "Saving the prepared Quad Program to: " <<  file_quad_prepared << endl;
+    quad2file(x6, file_quad_prepared.c_str(), true); //write the prepared quad to a file
+    
+    
+    // Register Allocation (Coloring)
+    cout << "---0006---Register Allocation (Coloring)---" << endl;
+    cout << "Number of colors to use = " << number_of_colors << endl;
+    XMLDocument *x7 = coloring(x6, number_of_colors, false); //coloring the quad program, print IGs along the way
+    cout << "Saving regAlloc'ed (colors XML) to " << file_quad_color_xml << endl;
+    x7->SaveFile(file_quad_color_xml.c_str());
+
+
     cout << "-----Done---" << endl;
 
     return EXIT_SUCCESS;
