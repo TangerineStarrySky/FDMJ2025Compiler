@@ -49,7 +49,7 @@ string term2str(QuadTerm *term, Color *color, int reg=9) {
         result = temp2str(term->get_temp(), color, reg);
     } else if (term->kind == QuadTermKind::CONST) {
         result = "#" + to_string(term->get_const());
-    } else if (term->kind == QuadTermKind::MAME) {
+    } else if (term->kind == QuadTermKind::NAME) {
         result = "@" + term->get_name();
     } else {
         cerr << "Error: Unknown term kind" << endl;
@@ -200,7 +200,7 @@ string convert(QuadFuncDecl* func, DataFlowInfo *dfi, Color *color, int indent) 
             // Convert load
             QuadLoad *load = static_cast<QuadLoad*>(quadstm);
             string tmp;
-            if (load->src->kind == QuadTermKind::MAME) 
+            if (load->src->kind == QuadTermKind::NAME) 
                 tmp = string(indent, ' ') + "ldr " + temp2str(load->dst, color, 10) + ", =" + normalizeName(load->src->get_name()) + "\n";
             else tmp = string(indent, ' ') + "ldr " + temp2str(load->dst, color, 10) + ", [" + term2str(load->src, color) + "]\n";
             

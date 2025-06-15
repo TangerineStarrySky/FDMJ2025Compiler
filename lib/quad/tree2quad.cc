@@ -137,21 +137,7 @@ void Tree2Quad::visit(Move* node) {
 #endif
     set<Temp*> *def = new set<Temp*>();
     set<Temp*> *use = new set<Temp*>();
-    if(tree::Mem* node_mem = dynamic_cast<tree::Mem*>(node->dst)){
-        // store
-        // cout << "store" << endl;
-        node_mem->mem->accept(*this);
-        QuadTerm *dst = output_term;
-        if(output_term->kind == QuadTermKind::TEMP) {
-            use->insert(output_term->get_temp()->temp);
-        }
-        node->src->accept(*this);
-        QuadTerm *src = output_term;
-        if(output_term->kind == QuadTermKind::TEMP) {
-            use->insert(output_term->get_temp()->temp);
-        }
-        visit_result->push_back(new QuadStore(node, src, dst, def, use));
-    } else if(tree::ExtCall* node_extcall = dynamic_cast<tree::ExtCall*>(node->src)) {
+    if(tree::ExtCall* node_extcall = dynamic_cast<tree::ExtCall*>(node->src)) {
         // cout << "extcall" << endl;
         vector<QuadTerm*> *args = new vector<QuadTerm*>();
         for (auto arg : *(node_extcall->args)) {
@@ -186,6 +172,20 @@ void Tree2Quad::visit(Move* node) {
         def->insert(dst->temp);
         QuadCall *quadCall = new QuadCall(node, node_call->id, obj_term, args, def, use);
         visit_result->push_back(new QuadMoveCall(node, dst, quadCall, def, use));
+    } else if(tree::Mem* node_mem = dynamic_cast<tree::Mem*>(node->dst)){
+        // store
+        // cout << "store" << endl;
+        node_mem->mem->accept(*this);
+        QuadTerm *dst = output_term;
+        if(output_term->kind == QuadTermKind::TEMP) {
+            use->insert(output_term->get_temp()->temp);
+        }
+        node->src->accept(*this);
+        QuadTerm *src = output_term;
+        if(output_term->kind == QuadTermKind::TEMP) {
+            use->insert(output_term->get_temp()->temp);
+        }
+        visit_result->push_back(new QuadStore(node, src, dst, def, use));
     } else if(tree::Binop* node_binop = dynamic_cast<tree::Binop*>(node->src)) {
         // cout << "binop" << endl;
         node_binop->left->accept(*this);
@@ -418,8 +418,6 @@ void Tree2Quad::visit(Call* node) {
     if(output_term->kind == QuadTermKind::TEMP) {
         use->insert(output_term->get_temp()->temp);
     }
-    // TempExp* dst = new TempExp(node->type, temp_map->newtemp());
-    // def->insert(dst->temp);
     visit_result->push_back(new QuadCall(node, node->id, obj_term, args, def, use));
     output_term = nullptr;
 }

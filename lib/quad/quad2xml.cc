@@ -82,7 +82,7 @@ void Quad2XML::addQuadTermElement(XMLElement* parent, const char* elemName, Quad
             termElem->SetAttribute("value", value);
             break;
         }
-        case QuadTermKind::MAME: {
+        case QuadTermKind::NAME: {
             termElem->SetAttribute("kind", "NAME");
             const string& name = std::get<string>(term->term);
             termElem->SetAttribute("name", name.c_str());

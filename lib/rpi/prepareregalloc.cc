@@ -351,7 +351,7 @@ static void handleOtherStm(QuadFuncDecl *quadFuncDecl) {
                                 block->quadlist->insert(block->quadlist->begin()+i, new_move);
                                 block->quadlist->erase(block->quadlist->begin()+i+2); //remove the original store
                                 i++;
-                            } if (store->src->kind == QuadTermKind::MAME) {
+                            } if (store->src->kind == QuadTermKind::NAME) {
                                 TempExp *new_t = new TempExp(Type::INT, temp_map->newtemp());
                                 //create two instrucitons to replace the current one 
                                 set<Temp*> *def = new set<Temp*>(); def->insert(new_t->temp);

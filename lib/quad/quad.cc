@@ -42,7 +42,7 @@ std::string QuadTerm::print() {
             return "t" + to_string(t_tempexp->temp->num) + ":" + (t_tempexp->type == Type::INT?"INT":"PTR"); 
         case QuadTermKind::CONST:
             return "Const:"+to_string(this->get_const());
-        case QuadTermKind::MAME:
+        case QuadTermKind::NAME:
             return "Name:"+get<std::string>(term);
     }
     return "";
@@ -62,7 +62,7 @@ int QuadTerm::get_const() {
 }
 
 string QuadTerm::get_name() {
-    if (kind == QuadTermKind::MAME) {
+    if (kind == QuadTermKind::NAME) {
         return get<std::string>(term);
     }
     return nullptr;
@@ -79,7 +79,7 @@ QuadTerm* QuadTerm::clone() const {
         }
         case QuadTermKind::CONST:
             return new QuadTerm(std::get<int>(term));
-        case QuadTermKind::MAME:
+        case QuadTermKind::NAME:
             return new QuadTerm(std::get<string>(term));
         default:
             return nullptr;

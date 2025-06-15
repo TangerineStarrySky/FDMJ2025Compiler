@@ -86,7 +86,7 @@ enum class QuadKind {
 string quadKindToString(QuadKind kind);
 
 enum class QuadTermKind { 
-    TEMP, CONST, MAME
+    TEMP, CONST, NAME
 };
 
 //Terminals of the Quad: temp, const, name(whichi is from a string label)
@@ -96,11 +96,11 @@ class QuadTerm {
     variant<monostate, TempExp *, int, string> term;
     QuadTerm(TempExp *temp) : term(temp), kind(QuadTermKind::TEMP) {}
     QuadTerm(int constant) : term(constant), kind(QuadTermKind::CONST) {}
-    QuadTerm(string name) : term(name), kind(QuadTermKind::MAME) {}
+    QuadTerm(string name) : term(name), kind(QuadTermKind::NAME) {}
 
     QuadTerm(Tree *node) {
         if (node->getTreeKind() == Kind::NAME) {
-            kind = QuadTermKind::MAME;
+            kind = QuadTermKind::NAME;
             term = static_cast<Name*>(node)->sname->name;
         } else if (node->getTreeKind() == Kind::CONST) {
             kind = QuadTermKind::CONST;
