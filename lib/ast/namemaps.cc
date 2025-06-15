@@ -198,7 +198,7 @@ bool Name_Maps::add_method_formal(string class_name, string method_name, string 
 
 Formal* Name_Maps::get_method_formal(string class_name, string method_name, string var_name) {
     if (!Name_Maps::is_method_formal(class_name, method_name, var_name)) {
-    cout << "WHAT?! class=" << class_name << " method=" << method_name << " var=" << var_name << endl;
+        cout << "WHAT?! class=" << class_name << " method=" << method_name << " var=" << var_name << endl;
         return nullptr;
     }
     return methodFormal[tuple<string, string, string>(class_name, method_name, var_name)];

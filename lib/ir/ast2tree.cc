@@ -602,8 +602,10 @@ void ASTToTreeVisitor::visit(fdmj::CallStm* node) {
     vector<string>* ancestors = nm->get_ancestors(method_cls);
     ancestors->insert(ancestors->begin(), method_cls);
     for(auto ancestor: *ancestors){
-        cfl = nm->get_method_formal(ancestor, method_name, "_^return^_"+method_name);
-        if(cfl) break;
+        if(nm->is_method_formal(ancestor, method_name, "_^return^_"+method_name)){
+            cfl = nm->get_method_formal(ancestor, method_name, "_^return^_"+method_name);
+            break;
+        }
     }
     tree::Type return_type = (cfl->type->typeKind == fdmj::TypeKind::INT)?tree::Type::INT:tree::Type::PTR;
 
@@ -924,8 +926,10 @@ void ASTToTreeVisitor::visit(fdmj::CallExp* node) {
     vector<string>* ancestors = nm->get_ancestors(method_cls);
     ancestors->insert(ancestors->begin(), method_cls);
     for(auto ancestor: *ancestors){
-        cfl = nm->get_method_formal(ancestor, method_name, "_^return^_"+method_name);
-        if(cfl) break;
+        if(nm->is_method_formal(ancestor, method_name, "_^return^_"+method_name)){
+            cfl = nm->get_method_formal(ancestor, method_name, "_^return^_"+method_name);
+            break;
+        }
     }
     tree::Type return_type = (cfl->type->typeKind == fdmj::TypeKind::INT)?tree::Type::INT:tree::Type::PTR;
 

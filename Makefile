@@ -33,7 +33,7 @@ run: $(MAIN)
 	cd $(CURDIR)/test/fmj_normal && \
 	for file in $$(ls .); do \
 		if [ "$${file#*.}" = "fmj" ]; then \
-			echo "Reading $${file#*.}.fmj"; \
+			echo "Reading $${file%%.*}.fmj"; \
 			$(MAIN) "$${file%%.*}"; \
 		fi; \
 	done; \
