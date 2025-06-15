@@ -547,18 +547,8 @@ void AST_Semant_Visitor::visit(BinaryOp* node) {
         cerr << "exit program ..." << endl;
         exit(1);
     }
-    if (left_semant->get_type() == TypeKind::ARRAY) {
-        // int lsize = std::get<int>(left_semant->get_type_par());
-        // int rsize = std::get<int>(right_semant->get_type_par());
-        // #ifdef DEBUG
-        // cout << "in BinaryOp: lsize: " << lsize << " rsize: " << rsize << endl;
-        // #endif
-        // if(lsize != rsize){
-        //     cerr << "Error: Array size mismatch in binary operation" << endl;
-        //     cerr << "exit program ..." << endl;
-        //     exit(1);
-        // }
-    } else if(left_semant->get_type() == TypeKind::CLASS){
+
+    if(left_semant->get_type() == TypeKind::CLASS){
         cerr << "Error: class type is not allowed in binary operation" << "\tPos: " << node->getPos()->print() << endl;
         cerr << "exit program ..." << endl;
         exit(1);
@@ -580,8 +570,8 @@ void AST_Semant_Visitor::visit(UnaryOp* node) {
             cerr << "exit program ..." << endl;
             exit(1);
         }
-        if (exp_semant->get_type() != TypeKind::INT) {
-            cerr << "Error: Unary operation must be applied to an integer" << "\tPos: " << node->getPos()->print() << endl;
+        if (exp_semant->get_type() == TypeKind::CLASS) {
+            cerr << "Error: class type is not allowed in unary operation" << "\tPos: " << node->getPos()->print() << endl;
             cerr << "exit program ..." << endl;
             exit(1);
         }

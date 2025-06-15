@@ -357,7 +357,10 @@ void ASTToTreeVisitor::visit(fdmj::VarDecl* node) {
             last_tmp = tmpexp;
         }
 
-        vector<IntExp*>* init_array = std::get<vector<IntExp*>*>(node->init);
+        vector<IntExp*>* init_array = nullptr;
+        // cout << "node->init.index():" << node->init.index() << endl;
+        if(node->init.index() == 2) 
+            init_array = std::get<vector<IntExp*>*>(node->init);
         
         node->type->arity->accept(*this);
         tree::Const* array_size = dynamic_cast<tree::Const*>(visit_exp_result->unEx(tm)->exp);
@@ -420,7 +423,8 @@ void ASTToTreeVisitor::visit(fdmj::VarDecl* node) {
                         // 变量初始化
                         if(visit_tree_result != nullptr) {
                             tree::Stm* tmp_stm = dynamic_cast<tree::Stm*>(visit_tree_result);
-                            tree::Exp* tmp_exp = last_tmp;
+                            tree::Exp* tmp_exp = last_tmp? last_tmp: new TempExp(tree::Type::INT, tm->newtemp());
+                            last_tmp = nullptr;
                             sl->push_back(new tree::Move(var_addr, new tree::Eseq(tree::Type::INT, tmp_stm, tmp_exp)));
                         }
                     }
@@ -440,7 +444,6 @@ void ASTToTreeVisitor::visit(fdmj::VarDecl* node) {
                 }
             }
         }
-        tm->newtemp(); // test
         visit_tree_result = new tree::Seq(sl);
     }
     visit_exp_result = nullptr;
@@ -531,15 +534,18 @@ void ASTToTreeVisitor::visit(fdmj::While* node) {
     loop_exit_labels.push(done_label);
     
     // 处理循环体
-    node->stm->accept(*this);
-    tree::Stm* body_stm = dynamic_cast<tree::Stm*>(visit_tree_result);
+    tree::Stm* body_stm = nullptr;
+    if(node->stm) {
+        node->stm->accept(*this);
+        body_stm = dynamic_cast<tree::Stm*>(visit_tree_result);
+    }
     
     // 构建控制流
     vector<tree::Stm*>* stmts = new vector<tree::Stm*>();
     stmts->push_back(new tree::LabelStm(test_label));
     stmts->push_back(cond->stm);
     stmts->push_back(new tree::LabelStm(body_label));
-    stmts->push_back(body_stm);
+    if(body_stm) stmts->push_back(body_stm);
     stmts->push_back(new tree::Jump(test_label));
     stmts->push_back(new tree::LabelStm(done_label));
 

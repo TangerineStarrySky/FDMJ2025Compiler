@@ -11,7 +11,7 @@ build:
 
 clean: 
 	@$(RM) build ; \
-	$(RM) test/*5.* \
+	$(RM) test/fmj_normal/*5.* \
 
 rebuild: clean build
 
@@ -29,6 +29,16 @@ handin:
 
 MAIN = $(BUILD_DIR)/tools/main/main
 
+run: $(MAIN)
+	cd $(CURDIR)/test/fmj_normal && \
+	for file in $$(ls .); do \
+		if [ "$${file#*.}" = "fmj" ]; then \
+			echo "Reading $${file#*.}.fmj"; \
+			$(MAIN) "$${file%%.*}"; \
+		fi; \
+	done; \
+	cd .. > /dev/null 2>&1 
+
 run-assem: $(MAIN)
 	cd $(CURDIR)/test && \
 	for file in $$(ls .); do \
@@ -41,7 +51,13 @@ run-assem: $(MAIN)
 	done; \
 	cd .. > /dev/null 2>&1 
 
-FILE=bubblesort
+FILE=hw5test0
+
+run-one: $(MAIN)
+	cd $(CURDIR)/test/fmj_normal && \
+	echo "Reading ${FILE}.fmj"; \
+	$(MAIN) "${FILE}"; \
+	cd .. > /dev/null 2>&1 
 
 run-one-assem: $(MAIN)
 	cd $(CURDIR)/test && \
