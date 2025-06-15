@@ -232,6 +232,11 @@ void ASTToTreeVisitor::visit(fdmj::MainMethod* node) {
     // Add entry label in the front
     tree::Label* entry_label = tm->newlabel();
     stmts->insert(stmts->begin(), new tree::LabelStm(entry_label));
+
+    // 如果没有return语句，则return 0
+    if (stmts->size() > 0 && stmts->back()->getTreeKind() != tree::Kind::RETURN) {
+        stmts->push_back(new tree::Return(new tree::Const(0)));
+    }
     
     // Create block
     tree::Block* block = new tree::Block(entry_label, exit_labels, stmts);
@@ -292,6 +297,12 @@ void ASTToTreeVisitor::visit(fdmj::MethodDecl* node) {
     // Add entry label in the front
     tree::Label* entry_label = tm->newlabel();
     stmts->insert(stmts->begin(), new tree::LabelStm(entry_label));
+
+    // 如果没有return语句，则return 0
+    if (stmts->size() > 0 && stmts->back()->getTreeKind() != tree::Kind::RETURN) {
+        cout << "\t[ADD RETURN 0] in " << func_name << endl;
+        stmts->push_back(new tree::Return(new tree::Const(0)));
+    }
     
     // Create block
     tree::Block* block = new tree::Block(entry_label, exit_labels, stmts);
