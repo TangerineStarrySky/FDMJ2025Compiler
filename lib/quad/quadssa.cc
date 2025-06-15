@@ -152,11 +152,16 @@ QuadTerm* renameQuadTerm(QuadTerm* quadTerm, map<int, stack<int>>& varStack, map
 }
 
 void renameBlockVariables(int block_num, DataFlowInfo* dataFlowInfo, ControlFlowInfo* domInfo, map<int, stack<int>>& varStack, map<int, int>& varCount) {
+    #ifdef DEBUG
+    cout << "Renaming variables in block " << block_num << endl;
+    #endif 
     map<int, stack<int>> copy_varStack = varStack;  // varStack 备份
     set<int> copy_is_def = is_def;          // is_def 备份
     quad::QuadBlock* block = domInfo->labelToBlock[block_num];
     for (auto stm : *block->quadlist) {
-        // cout << "Renaming stm: " << quadKindToString(stm->kind) << endl;
+        #ifdef DEBUG
+        cout << "Renaming stm: " << quadKindToString(stm->kind) << endl;
+        #endif
         set<Temp*>* new_def = new set<Temp*>();
         set<Temp*>* new_use = new set<Temp*>();
 
@@ -242,6 +247,8 @@ void renameBlockVariables(int block_num, DataFlowInfo* dataFlowInfo, ControlFlow
         auto it = std::find(pres.begin(), pres.end(), block_num);
         int position = std::distance(pres.begin(), it);
         for(int a: A_phi[Y]){
+            if(dataFlowInfo->allVars.find(a) == dataFlowInfo->allVars.end())
+                continue;
             // cout << "process phi " << Y << "   var " << a << endl;
             int i = varStack[a].top();
             int versionedNum = VersionedTemp::versionedTempNum(a, i);
