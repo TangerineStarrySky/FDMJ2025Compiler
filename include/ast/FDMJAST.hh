@@ -113,7 +113,7 @@
         Formal(Pos *pos, Type *type, IdExp *id): AST(pos), type(type), id(id) {
             if (type->typeKind == TypeKind::ARRAY) {
                 if (type->arity == nullptr) {
-                    cerr << "at position: " << pos->print() << endl;
+                    // cerr << "at position: " << pos->print() << endl;
                     cerr << "Error: Array type has no arity in the formal. Not allowed!" << endl;
                     exit(1);
                 }

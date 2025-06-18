@@ -2,4 +2,3 @@ build
 *.ast
 *.png
 *.py
-test
