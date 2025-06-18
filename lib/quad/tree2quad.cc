@@ -152,6 +152,23 @@ void Tree2Quad::visit(Move* node) {
         def->insert(dst->temp);
         QuadExtCall *quadExtCall = new QuadExtCall(node, node_extcall->extfun, args, def, use);
         visit_result->push_back(new QuadMoveExtCall(node, dst, quadExtCall, def, use));
+        if(node->dst->getTreeKind() == Kind::MEM){
+            // If the destination is a memory location, we need to store the result
+            // cout << "store result of call" << endl;
+            tree::Mem* node_mem = dynamic_cast<tree::Mem*>(node->dst);
+            QuadTerm *result = output_term;
+            set<Temp*> *def_mem = new set<Temp*>();
+            set<Temp*> *use_mem = new set<Temp*>();
+            if(result->kind == QuadTermKind::TEMP) {
+                use_mem->insert(result->get_temp()->temp);
+            }
+            node_mem->mem->accept(*this);
+            QuadTerm *dst = output_term;
+            if(output_term->kind == QuadTermKind::TEMP) {
+                use_mem->insert(output_term->get_temp()->temp);
+            }
+            visit_result->push_back(new QuadStore(node, result, dst, def_mem, use_mem));
+        }
     } else if(tree::Call* node_call = dynamic_cast<tree::Call*>(node->src)) {
         // cout << "call" << endl;
         vector<QuadTerm*> *args = new vector<QuadTerm*>();
@@ -172,6 +189,23 @@ void Tree2Quad::visit(Move* node) {
         def->insert(dst->temp);
         QuadCall *quadCall = new QuadCall(node, node_call->id, obj_term, args, def, use);
         visit_result->push_back(new QuadMoveCall(node, dst, quadCall, def, use));
+        if(node->dst->getTreeKind() == Kind::MEM){
+            // If the destination is a memory location, we need to store the result
+            // cout << "store result of call" << endl;
+            tree::Mem* node_mem = dynamic_cast<tree::Mem*>(node->dst);
+            QuadTerm *result = output_term;
+            set<Temp*> *def_mem = new set<Temp*>();
+            set<Temp*> *use_mem = new set<Temp*>();
+            if(result->kind == QuadTermKind::TEMP) {
+                use_mem->insert(result->get_temp()->temp);
+            }
+            node_mem->mem->accept(*this);
+            QuadTerm *dst = output_term;
+            if(output_term->kind == QuadTermKind::TEMP) {
+                use_mem->insert(output_term->get_temp()->temp);
+            }
+            visit_result->push_back(new QuadStore(node, result, dst, def_mem, use_mem));
+        }
     } else if(tree::Mem* node_mem = dynamic_cast<tree::Mem*>(node->dst)){
         // store
         // cout << "store" << endl;
