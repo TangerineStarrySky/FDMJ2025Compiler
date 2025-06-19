@@ -338,8 +338,8 @@ void ASTToTreeVisitor::visit(fdmj::VarDecl* node) {
             }else{
                 tm->newtemp(); // test
                 tmp = new tree::TempExp(tree::Type::INT, tm->newtemp());
-                last_tmp = tmp;
             }
+            last_tmp = tmp;
             tree::Stm* move_stm = new tree::Move(tmp, vd);
             visit_tree_result = new tree::Seq(new std::vector<tree::Stm*>{move_stm});
         } else {
@@ -354,8 +354,8 @@ void ASTToTreeVisitor::visit(fdmj::VarDecl* node) {
             vd = visit_exp_result->unEx(tm)->exp;
         }else{
             vd = tmpexp;
-            last_tmp = tmpexp;
         }
+        last_tmp = vd;
 
         vector<IntExp*>* init_array = nullptr;
         // cout << "node->init.index():" << node->init.index() << endl;
@@ -423,7 +423,7 @@ void ASTToTreeVisitor::visit(fdmj::VarDecl* node) {
                         // 变量初始化
                         if(visit_tree_result != nullptr) {
                             tree::Stm* tmp_stm = dynamic_cast<tree::Stm*>(visit_tree_result);
-                            tree::Exp* tmp_exp = last_tmp? last_tmp: new TempExp(tree::Type::INT, tm->newtemp());
+                            tree::Exp* tmp_exp = last_tmp;
                             last_tmp = nullptr;
                             sl->push_back(new tree::Move(var_addr, new tree::Eseq(tree::Type::INT, tmp_stm, tmp_exp)));
                         }
