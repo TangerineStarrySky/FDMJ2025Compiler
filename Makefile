@@ -6,12 +6,13 @@ MAKEFLAGS = --no-print-directory
 BUILD_DIR = $(CURDIR)/build
 
 build:
-	@cmake -G Ninja -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=Release; \
-	cd $(BUILD_DIR) && ninja
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Release && make
 
-clean: 
+clean:
 	@$(RM) build ; \
-	$(RM) test/fmj_normal/*5.* \
+	find test/fmj_normal -type f ! -name "*.fmj" -exec $(RM) {} +
+	
 
 rebuild: clean build
 
@@ -25,11 +26,11 @@ handin:
 	zip -q -r "docs/$$filename-final.zip" \
 	  docs/report.pdf include lib
 
-.PHONY: run run-one gentests gentest-one patchdemo 
+.PHONY: compile run compile-one run-one
 
 MAIN = $(BUILD_DIR)/tools/main/main
 
-run: $(MAIN)
+compile: $(MAIN)
 	cd $(CURDIR)/test/fmj_normal && \
 	for file in $$(ls .); do \
 		if [ "$${file#*.}" = "fmj" ]; then \
@@ -39,29 +40,31 @@ run: $(MAIN)
 	done; \
 	cd .. > /dev/null 2>&1 
 
-run-assem: $(MAIN)
-	cd $(CURDIR)/test && \
+run: $(MAIN)
+	cd $(CURDIR)/test/fmj_normal && \
 	for file in $$(ls .); do \
 		if [ "$${file#*.}" = "6-xml.clr" ]; then \
 			echo "------Reading $${file%%.*}------"; \
-			arm-linux-gnueabihf-gcc -mcpu=cortex-a72 -Wall -Wextra --static -o "$${file%%.*}" "$${file%%.*}.s" ../vendor/libsysy/libsysy32.s -lm; \
-			echo "Running the final assembly program........." ; \
+			arm-linux-gnueabihf-gcc -mcpu=cortex-a72 -Wall -Wextra --static -o "$${file%%.*}" "$${file%%.*}.s" ../../vendor/libsysy/libsysy32.s -lm; \
+			# echo "Running the final assembly program........." ; \
 			qemu-arm -B 0x1000 $${file%%.*}; \
+			echo "Exit status: $$?"; \
 		fi; \
 	done; \
 	cd .. > /dev/null 2>&1 
 
 FILE=hw5test0
 
-run-one: $(MAIN)
+compile-one: $(MAIN)
 	cd $(CURDIR)/test/fmj_normal && \
 	echo "Reading ${FILE}.fmj"; \
 	$(MAIN) "${FILE}"; \
 	cd .. > /dev/null 2>&1 
 
-run-one-assem: $(MAIN)
-	cd $(CURDIR)/test && \
-    arm-linux-gnueabihf-gcc -mcpu=cortex-a72 -Wall -Wextra --static -o "${FILE}" "${FILE}.s" ../vendor/libsysy/libsysy32.s -lm; \
-	echo "Running the final assembly program........." ; \
+run-one: $(MAIN)
+	cd $(CURDIR)/test/fmj_normal && \
+    arm-linux-gnueabihf-gcc -mcpu=cortex-a72 -Wall -Wextra --static -o "${FILE}" "${FILE}.s" ../../vendor/libsysy/libsysy32.s -lm; \
+	# echo "Running the final assembly program........." ; \
 	qemu-arm -B 0x1000 ${FILE}; \
+	echo "Exit status of the command: $$?"; \
 	cd .. > /dev/null 2>&1 

@@ -1,4 +1,4 @@
 build
-*.ast
-*.png
-*.py
+docs/*/*.md
+docs/*.html
+docs/*.md
