@@ -48,12 +48,12 @@ run: $(MAIN)
 			arm-linux-gnueabihf-gcc -mcpu=cortex-a72 -Wall -Wextra --static -o "$${file%%.*}" "$${file%%.*}.s" ../../vendor/libsysy/libsysy32.s -lm; \
 			# echo "Running the final assembly program........." ; \
 			qemu-arm -B 0x1000 $${file%%.*}; \
-			echo "Exit status: $$?"; \
+			echo "Return code: $$?"; \
 		fi; \
 	done; \
 	cd .. > /dev/null 2>&1 
 
-FILE=hw5test0
+FILE=recursive
 
 compile-one: $(MAIN)
 	cd $(CURDIR)/test/fmj_normal && \
@@ -66,5 +66,5 @@ run-one: $(MAIN)
     arm-linux-gnueabihf-gcc -mcpu=cortex-a72 -Wall -Wextra --static -o "${FILE}" "${FILE}.s" ../../vendor/libsysy/libsysy32.s -lm; \
 	# echo "Running the final assembly program........." ; \
 	qemu-arm -B 0x1000 ${FILE}; \
-	echo "Exit status of the command: $$?"; \
+	echo "Return code: $$?"; \
 	cd .. > /dev/null 2>&1 

@@ -179,11 +179,11 @@ bool Coloring::freeze() {
             #endif
             
             // 冻结后可能允许继续简化
-            if (u_in_graph && graph[u].size() < k && !isMove(u)) {
+            if (u_in_graph && graph[u].size() < k && !isMove(u) && !isMachineReg(u)) {
                 simplifiedNodes.push(u);
                 eraseNode(u);
             }
-            if (v_in_graph && graph[v].size() < k && !isMove(v)) {
+            if (v_in_graph && graph[v].size() < k && !isMove(v) && !isMachineReg(v)) {
                 simplifiedNodes.push(v);
                 eraseNode(v);
             }
