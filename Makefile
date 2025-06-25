@@ -53,7 +53,7 @@ run: $(MAIN)
 	done; \
 	cd .. > /dev/null 2>&1 
 
-FILE=recursive
+FILE=gobang
 
 compile-one: $(MAIN)
 	cd $(CURDIR)/test/fmj_normal && \

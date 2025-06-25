@@ -419,7 +419,10 @@ void ASTToTreeVisitor::visit(fdmj::VarDecl* node) {
                 VarDecl* vdl = nm->get_class_var(ancestor, var);
                 if(vdl){
                     if(vdl->type->typeKind != fdmj::TypeKind::CLASS){
-                        vdl->accept(*this);
+                        // vdl 复制一份
+                        VarDecl* vdl_copy = vdl->clone();
+                        vdl_copy->id->id += "_^" + ancestor; // 处理变量名冲突
+                        vdl_copy->accept(*this);
                         // 变量初始化
                         if(visit_tree_result != nullptr) {
                             tree::Stm* tmp_stm = dynamic_cast<tree::Stm*>(visit_tree_result);

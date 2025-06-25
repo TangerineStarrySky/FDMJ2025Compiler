@@ -77,7 +77,9 @@ static void placePhi(QuadFuncDecl* func, ControlFlowInfo* domInfo) {
                     quad::QuadPhi* phiStm = new quad::QuadPhi(nullptr, new tree::TempExp(tree::Type::INT, new Temp(a)), args, def, use);
                     quad::QuadBlock* blockY = domInfo->labelToBlock[Y];
                     blockY->quadlist->insert(blockY->quadlist->begin()+1, phiStm);
-
+                    #ifdef DEBUG
+                    cout << "Inserted φ function for variable " << a << " at block " << Y << endl;
+                    #endif
                     // 更新Aφ[n]和W
                     A_phi[Y].insert(a);
                     for (auto block_stm_pair: (*dataFlowInfo->defs)[a]) {
@@ -159,9 +161,9 @@ void renameBlockVariables(int block_num, DataFlowInfo* dataFlowInfo, ControlFlow
     set<int> copy_is_def = is_def;          // is_def 备份
     quad::QuadBlock* block = domInfo->labelToBlock[block_num];
     for (auto stm : *block->quadlist) {
-        #ifdef DEBUG
-        cout << "Renaming stm: " << quadKindToString(stm->kind) << endl;
-        #endif
+        // #ifdef DEBUG
+        // cout << "Renaming stm: " << quadKindToString(stm->kind) << endl;
+        // #endif
         set<Temp*>* new_def = new set<Temp*>();
         set<Temp*>* new_use = new set<Temp*>();
 
@@ -254,6 +256,8 @@ void renameBlockVariables(int block_num, DataFlowInfo* dataFlowInfo, ControlFlow
             int versionedNum = VersionedTemp::versionedTempNum(a, i);
             if(is_def.find(a) == is_def.end()) // 如果没定义 不加版本号
                 versionedNum = a;
+            if(std::find(params_nums.begin(), params_nums.end(), a) != params_nums.end()) // 如果是参数 不加版本号
+                versionedNum = a;
             // cout << "Y:" << Y << "   block: " << block_num << "  version: " << versionedNum << endl;
             quad::QuadBlock* next_block = domInfo->labelToBlock[Y];
             for (auto stm : *next_block->quadlist) {
@@ -307,6 +311,35 @@ static void renameVariables(QuadFuncDecl* func, ControlFlowInfo* domInfo) {
 }
 
 static void cleanupUnusedPhi(QuadFuncDecl* func) {
+    #ifdef DEBUG
+    cout << "Cleaning up unused phi functions for function: " << func->funcname << endl;
+    #endif
+    for (auto block : *func->quadblocklist) {
+        for(auto it = block->quadlist->begin(); it != block->quadlist->end();) {
+            if ((*it)->kind == QuadKind::PHI) {
+                quad::QuadPhi* phiStm = static_cast<quad::QuadPhi*>(*it);
+                // Check if the args temp is the same in phi function
+                bool allSame = true;
+                for (size_t i = 1; i < phiStm->args->size(); ++i) {
+                    if ((*phiStm->args)[i].first->num != (*phiStm->args)[0].first->num) {
+                        allSame = false;
+                        break;
+                    }
+                }
+                if (allSame) {
+                    it = block->quadlist->erase(it);
+                    #ifdef DEBUG
+                    // Remove the phi function if all args are the same
+                    cout << "[SSA] Removing unused phi function in block " << block->entry_label->num << endl;
+                    #endif
+                } else {
+                    ++it;
+                }
+            } else{
+                ++it;
+            }
+        }
+    }
     return; // Placeholder for the actual implementation
 }
 
@@ -315,11 +348,17 @@ QuadProgram *quad2ssa(QuadProgram* program) {
     QuadProgram* ssaProgram = new QuadProgram(static_cast<tree::Program*>(program->node), new vector<QuadFuncDecl*>());
     // Iterate through each function in the original program
     for (auto func : *program->quadFuncDeclList) {
+        #ifdef DEBUG
+        cout << "[SSA] Processing function: " << func->funcname << endl;
+        #endif
         // Create a new ControlFlowInfo object for the function
         ControlFlowInfo* domInfo = new ControlFlowInfo(func);
         // Compute control flow information
         domInfo->computeEverything();
         
+        // clear A_phi
+        A_phi.clear();
+
         // Eliminate unreachable blocks
         deleteUnreachableBlocks(func, domInfo);
         

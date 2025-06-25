@@ -1,0 +1,134 @@
+public int main() {
+  class MazeSolver solver;
+  solver.run();
+  return 0;
+}
+
+public class MazeSolver{
+  int[100] grid;
+  int[100] pathStack;
+  int rows = 5;
+  int cols = 5;
+  int pathCount;
+
+  public int run() {
+    this.init();
+    this.pathCount = 0;
+    this.dfs(0, 0, 0);  // r, c, top = 0
+    this.printInt(this.pathCount);
+    return 0;
+  }
+
+  public int init() {
+    int i;
+    i = 0;
+    while (i < this.rows * this.cols) {
+      this.grid[i] = 0;
+      i = i + 1;
+    }
+    this.grid[6] = 1;
+    this.grid[7] = 1;
+    this.grid[13] = 1;
+    this.grid[17] = 1;
+    return 0;
+  }
+
+  public int dfs(int r, int c, int top) {
+    int index;
+    int result;
+
+    if (r >= this.rows || c >= this.cols) return 0;
+    index = r * this.cols + c;
+    if (this.grid[index] != 0) return 0;
+
+    this.grid[index] = 2;
+    this.pathStack[top] = index;
+    top = top + 1;
+
+    if (r == this.rows - 1 && c == this.cols - 1) {
+      this.pathCount = this.pathCount + 1;
+      this.printMaze(top);
+    } else {
+      this.dfs(r + 1, c, top);
+      this.dfs(r, c + 1, top);
+    }
+
+    this.grid[index] = 0;
+    return 0;
+  }
+
+  public int printMaze(int top) {
+    int i;
+    int j;
+    int k;
+    int mark;
+    int index;
+    int value;
+
+    k = 0;
+    while (k < top) {
+      mark = this.pathStack[k];
+      this.grid[mark] = 3; // 临时标记路径为 *
+      k = k + 1;
+    }
+
+    i = 0;
+    while (i < this.rows) {
+      j = 0;
+      while (j < this.cols) {
+        index = i * this.cols + j;
+        value = this.grid[index];
+        if (value == 0) putch(46);     // '.'
+        else if (value == 1) putch(35); // '#'
+        else if (value == 3) putch(42); // '*'
+        else putch(64);                 // 其他（运行中用 @）
+        putch(32);
+        j = j + 1;
+      }
+      putch(10);
+      i = i + 1;
+    }
+
+    // 恢复为未访问状态（3 → 0）
+    k = 0;
+    while (k < top) {
+      mark = this.pathStack[k];
+      this.grid[mark] = 2; // 恢复为递归访问状态，下一层再清0
+      k = k + 1;
+    }
+
+    putch(10);
+    return 0;
+  }
+
+  public int printInt(int x) {
+    int[10] stack;
+    int top;
+    int digit;
+    top = 0;
+
+    if (x == 0) {
+      putch(48);
+      putch(10);
+      return 0;
+    }
+
+    while (x > 0) {
+      digit = this.mod(x, 10);
+      stack[top] = digit;
+      x = x / 10;
+      top = top + 1;
+    }
+
+    while (top > 0) {
+      top = top - 1;
+      putch(stack[top] + 48);
+    }
+    putch(10);
+    return 0;
+  }
+
+  public int mod(int a, int b) {
+    return a - a / b * b;
+  }
+}
