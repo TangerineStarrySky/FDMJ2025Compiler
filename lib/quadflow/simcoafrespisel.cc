@@ -61,10 +61,10 @@ bool Coloring::coalesce() {
         int v = it->second;
 
         if(isAnEdge(graph, u, v)) continue;
+        if(isMachineReg(u) && isMachineReg(v)) continue; // 不能同时是机器寄存器
         
         // 确定主导节点(lead node)
         int lead, other;
-        
         // 规则1：机器寄存器必须作为主导节点
         if (isMachineReg(u)) {
             lead = u;
@@ -163,13 +163,8 @@ bool Coloring::freeze() {
     for (auto it = movePairs.begin(); it != movePairs.end(); it++) {
         int u = it->first;
         int v = it->second;
-        
-        bool u_in_graph = graph.count(u);
-        bool v_in_graph = graph.count(v);
-        
-        if ((!u_in_graph || graph[u].size() < k) && 
-            (!v_in_graph || graph[v].size() < k)) {
-            
+
+        if ((graph[u].size() < k) || (graph[v].size() < k)) {
             // 冻结这条移动指令
             it = movePairs.erase(it);
             changed = true;
@@ -177,16 +172,6 @@ bool Coloring::freeze() {
             #ifdef DEBUG
             cout << "Frozen move: " << u << " <-> " << v << endl;
             #endif
-            
-            // 冻结后可能允许继续简化
-            if (u_in_graph && graph[u].size() < k && !isMove(u) && !isMachineReg(u)) {
-                simplifiedNodes.push(u);
-                eraseNode(u);
-            }
-            if (v_in_graph && graph[v].size() < k && !isMove(v) && !isMachineReg(v)) {
-                simplifiedNodes.push(v);
-                eraseNode(v);
-            }
             break;
         }
     }
@@ -200,14 +185,12 @@ bool Coloring::spill() {
     #ifdef DEBUG
     cout << "enter spill  ";
     #endif
-    if (graph.empty()) return false;
-    
     // 选择溢出候选节点（使用简单启发式：最高度数）
     int spill_candidate = -1;
     size_t max_degree = 0;
     
     for (const auto& [node, neighbors] : graph) {
-        if (!isMachineReg(node) && !coalescedMoves.count(node)) {
+        if (!isMachineReg(node)) {
             size_t degree = neighbors.size();
             if (degree > max_degree) {
                 max_degree = degree;
@@ -233,8 +216,6 @@ bool Coloring::spill() {
         
         #ifdef DEBUG
         cout << "Potential spill: " << spill_candidate << endl;
-        // cout << "**********************************" << endl;
-        // cout << printColoring();
         #endif
         
         return true;
@@ -250,8 +231,9 @@ bool Coloring::select() {
     cout << "enter select" << endl;
     cout << printColoring();
     #endif
-
-    // 给图中剩余的节点着色
+    graph = ig->graph;
+    
+    // 给机器寄存器节点着色
     for (const auto& [node, neighbors] : graph) {
         if (isMachineReg(node)){
             colors[node] = node;
@@ -261,32 +243,15 @@ bool Coloring::select() {
                         colors[coalesced] = node;
                 }
             }
-            continue;
-        }
-        set<int> used_colors_1;
-        set<int> neighbors_1 = getNeighbors(node); 
-        for (int neighbor : neighbors_1) {
-            if (colors.count(neighbor)) {
-                used_colors_1.insert(colors[neighbor]);
-            }
-        }
-        for (int c = 0; c < k; c++) {
-            if (used_colors_1.find(c) == used_colors_1.end()) {
-                colors[node] = c;
-                break;
-            }
         }
     }
-
-    graph = ig->graph;
 
     // Process nodes in reverse order of simplification
     while (!simplifiedNodes.empty()) {
         int node = simplifiedNodes.top();
         simplifiedNodes.pop();
 
-        // if(colors.count(node))
-        //     continue;
+        if(colors.count(node)) continue;
         
         // 收集邻居已使用的颜色
         set<int> used_colors;
@@ -296,8 +261,16 @@ bool Coloring::select() {
                 used_colors.insert(colors[neighbor]);
             }
         }
+
+        for(auto& pair : coalescedMoves[node]) {
+            for (int neighbor : getNeighbors(pair)) {
+                if (colors.count(neighbor)) {
+                    used_colors.insert(colors[neighbor]);
+                }
+            }
+        }
         
-        // 尝试分配可用颜色
+        // 尝试分配可用颜色，选择第一个可分配的
         for (int c = 0; c < k; c++) {
             if (used_colors.find(c) == used_colors.end()) {
                 colors[node] = c;
@@ -313,8 +286,13 @@ bool Coloring::select() {
             #ifdef DEBUG
             cout << "Actual spill: " << node << endl;
             #endif
-
-            // select();
+            for(auto& pair : coalescedMoves[node]) {
+                #ifdef DEBUG
+                cout << "Spill coalesced node: " << pair << endl;
+                #endif
+                spilled.insert(pair);
+                colors[pair] = 0; // 标记为溢出
+            }
         } else {
             if(coalescedMoves.count(node)){
                 for(const auto& coalesced: coalescedMoves[node]){

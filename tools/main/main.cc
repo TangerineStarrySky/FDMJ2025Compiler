@@ -38,7 +38,7 @@ fdmj::Program *prog();
 
 int main(int argc, const char *argv[]) {
     string file;
-    int number_of_colors = 5; //default 9: r0-r8
+    int number_of_colors = 9; //default 9: r0-r8
     const bool noc = argc > 1 && std::strcmp(argv[1], "-k") == 0;
 
     if ((!noc && argc != 2) || (noc && argc != 4)) {
